@@ -135,7 +135,7 @@ def generate_listings(n: int = 2000, coverage_per_bedroom: int = 8) -> pd.DataFr
     """Generate synthetic listings with stratified coverage per city/district/bedroom."""
     records: List[dict] = []
     idx = 1
-    # Coverage block: ensure each city/district/bedroom bucket出现若干条
+    # Coverage block: ensure each city/district/bedroom bucket has samples
     for city, districts in CITIES.items():
         for district in districts:
             for br in BEDROOM_BUCKETS:

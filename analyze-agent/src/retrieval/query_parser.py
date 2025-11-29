@@ -4,7 +4,6 @@ from __future__ import annotations
 import re
 from typing import Dict, List
 
-# City/district vocabulary for simple substring matching
 CITY_DISTRICTS = {
     "北京": ["海淀", "朝阳", "东城", "西城", "丰台", "通州"],
     "上海": ["徐汇", "浦东", "静安", "长宁", "杨浦", "普陀"],

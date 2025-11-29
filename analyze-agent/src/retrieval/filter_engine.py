@@ -38,9 +38,16 @@ def apply_filters(df: pd.DataFrame, conditions: Dict[str, Any]) -> pd.DataFrame:
     if max_area is not None:
         mask &= df["area"] <= max_area
 
-    bedrooms = conditions.get("bedrooms")
-    if bedrooms is not None:
-        mask &= df["bedrooms"] >= bedrooms
+    bedrooms_exact = conditions.get("bedrooms_exact")
+    bedrooms_min = conditions.get("bedrooms")
+    if bedrooms_exact is not None and "bedrooms" in df:
+        mask &= df["bedrooms"] == bedrooms_exact
+    elif bedrooms_min is not None and "bedrooms" in df:
+        mask &= df["bedrooms"] >= bedrooms_min
+
+    livingrooms_exact = conditions.get("livingrooms_exact")
+    if livingrooms_exact is not None and "livingrooms" in df:
+        mask &= df["livingrooms"] == livingrooms_exact
 
     if school_district := conditions.get("school_district"):
         mask &= df["school_district"] == school_district
