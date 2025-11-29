@@ -1,7 +1,7 @@
 ﻿"""Project configuration for analyze-agent."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict
 
@@ -28,8 +28,8 @@ class RetrievalWeights:
 
 @dataclass
 class Settings:
-    paths: Paths = Paths()
-    weights: RetrievalWeights = RetrievalWeights()
+    paths: Paths = field(default_factory=Paths)
+    weights: RetrievalWeights = field(default_factory=RetrievalWeights)
     bm25_max_features: int = 8000
     bm25_ngram: tuple[int, int] = (1, 2)
     semantic_model: str = "tfidf"  # placeholder; swap to sentence-transformers name if needed
