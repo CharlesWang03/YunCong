@@ -22,10 +22,10 @@
   - `dashboards/admin.py`：Streamlit 后台数据浏览/筛选/分布。
   - `config.py`、`utils/`、`prompts/`、`tests/` 占位。
 
-## 使用指南（本地）
+## 使用指南（本地，复用已有 conda 环境 llm_env）
 ```bash
 cd analyze-agent
-python -m venv .venv && .venv\Scripts\activate
+conda activate llm_env
 pip install -r requirements.txt
 python -m src.pipeline.generate_listings   # 生成示例 Excel
 python -m src.pipeline.preprocess          # 清洗为 Parquet
