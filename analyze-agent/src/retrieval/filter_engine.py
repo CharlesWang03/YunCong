@@ -1,9 +1,17 @@
 ﻿"""Structured filter engine."""
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any, Dict, Iterable
 
 import pandas as pd
+
+
+def _to_list(val: Any) -> Iterable:
+    if val is None:
+        return []
+    if isinstance(val, (list, tuple, set)):
+        return val
+    return [val]
 
 
 def apply_filters(df: pd.DataFrame, conditions: Dict[str, Any]) -> pd.DataFrame:
@@ -13,7 +21,8 @@ def apply_filters(df: pd.DataFrame, conditions: Dict[str, Any]) -> pd.DataFrame:
     if city := conditions.get("city"):
         mask &= df["city"] == city
     if districts := conditions.get("districts"):
-        mask &= df["district"].isin(districts)
+        district_list = list(_to_list(districts))
+        mask &= df["district"].isin(district_list)
 
     min_price = conditions.get("min_price")
     max_price = conditions.get("max_price")

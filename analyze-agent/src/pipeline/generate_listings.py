@@ -1,8 +1,8 @@
-﻿"""Generate synthetic listings."""
+﻿"""Generate synthetic listings with stratified coverage."""
 from __future__ import annotations
 
 import random
-from datetime import date, timedelta
+from datetime import date
 from pathlib import Path
 from typing import List
 
@@ -25,16 +25,23 @@ ORIENTATIONS = ["南北", "朝南", "朝东", "朝西", "朝北"]
 BUILDING_TYPES = ["板楼", "塔楼", "洋房", "别墅"]
 RENOVATIONS = ["精装修", "简装", "毛坯"]
 COMPANIES = ["链家", "我爱我家", "德佑", "自营"]
+BEDROOM_BUCKETS = [1, 2, 3, 4]
 
 
-def _mock_listing(i: int) -> dict:
-    city = random.choice(list(CITIES.keys()))
-    district = random.choice(CITIES[city])
+def _mock_listing(
+    i: int,
+    city: str | None = None,
+    district: str | None = None,
+    bedrooms: int | None = None,
+) -> dict:
+    """Generate a single listing with optional forced city/district/bedrooms for coverage."""
+    city = city or random.choice(list(CITIES.keys()))
+    district = district or random.choice(CITIES[city])
     community = fake.street_name()
     address = fake.address()
 
     area = float(np.clip(np.random.normal(90, 30), 45, 200))
-    bedrooms = random.randint(1, 4)
+    bedrooms = bedrooms if bedrooms is not None else random.randint(1, 4)
     livingrooms = 1
     bathrooms = random.randint(1, 2)
     layout = f"{bedrooms}室{livingrooms}厅{bathrooms}卫"
@@ -124,16 +131,31 @@ def _mock_listing(i: int) -> dict:
     }
 
 
-def generate_listings(n: int = 200) -> pd.DataFrame:
-    """Generate synthetic listings DataFrame."""
-    return pd.DataFrame(_mock_listing(i) for i in range(1, n + 1))
+def generate_listings(n: int = 2000, coverage_per_bedroom: int = 8) -> pd.DataFrame:
+    """Generate synthetic listings with stratified coverage per city/district/bedroom."""
+    records: List[dict] = []
+    idx = 1
+    # Coverage block: ensure each city/district/bedroom bucket出现若干条
+    for city, districts in CITIES.items():
+        for district in districts:
+            for br in BEDROOM_BUCKETS:
+                for _ in range(coverage_per_bedroom):
+                    records.append(_mock_listing(idx, city=city, district=district, bedrooms=br))
+                    idx += 1
+    # Fill remaining with fully random samples
+    remaining = max(0, n - len(records))
+    for _ in range(remaining):
+        records.append(_mock_listing(idx))
+        idx += 1
+    random.shuffle(records)
+    return pd.DataFrame.from_records(records)
 
 
-def save_to_excel(path: Path | None = None, n: int = 200) -> Path:
+def save_to_excel(path: Path | None = None, n: int = 2000, coverage_per_bedroom: int = 8) -> Path:
     """Generate listings and save to Excel (raw)."""
     output = path or settings.paths.raw_excel
     output.parent.mkdir(parents=True, exist_ok=True)
-    df = generate_listings(n)
+    df = generate_listings(n=n, coverage_per_bedroom=coverage_per_bedroom)
     df.to_excel(output, index=False)
     return output
 
