@@ -1,0 +1,47 @@
+OK我们来进行一项功能开发。背景是我在秋招，遇到一家公司给我留了一个开发题目，我需要在你的协同下尽量去实现要求。
+
+题目如下：
+数据分析助手
+要求：导入给定的一个“待售房产列表”的Excel文件，用户输入购房要求，可以筛选出符合条件的房产。
+
+已知没有测试集，训练数据和测试数据需要我们自习构造。
+请你先协助我分析一下我们的开发思路，是否需要使用大模型或者能通过其他算法角度实现。建议分成不同的模块不同的步骤来讲述。
+
+
+Data: List of property
+input: preference
+output: list of property
+
+Overall Shape
+
+Input: Excel file with listings; user query with purchase requirements (budget, area, rooms, location, subway, floor, etc.).
+Output: Filtered table (and maybe a ranked list) + summary stats.
+Architecture: Data ingestion → normalization/validation → query parsing → filtering → optional scoring/ranking → export/visualization.
+模块与步骤
+
+数据导入与清洗
+Use pandas to load Excel; standardize columns (price, unit price, size, rooms, district, coordinates, floor, year, tags).
+Handle missing values, normalize units (万元 vs 元, 平米), derive features (单价, 总价区间标签, 房龄).
+Validate types; drop/flag outliers.
+需求解析
+If requirements are structured inputs (form/CLI flags), no ML needed—map directly to filters.
+If free text, add a lightweight parser:
+Regex/关键词词典 to extract numbers and ranges (e.g., “总价300-500万”, “不超过400万”, “面积>90”, “两居/3室”, “学区”, “地铁1km内”).
+Simple synonyms mapping (“三房”→3室).
+Optional: use a small LLM call for fallback parsing, but not required if time-limited.
+过滤逻辑
+Build a filter pipeline applying conditions:
+数值范围: 总价、单价、面积、楼层、房龄、距离地铁/学校。
+分类匹配: 区域、小区名、朝向、装修、物业类型。
+必选/可选: 支持“必须满足”与“加分项”分开。
+Implement as composable predicates on the DataFrame; keep a filter report (which conditions removed how many rows).
+排序与打分（可选）
+Simple ranking: by总价, 单价, 房龄, 近地铁距离, 面积。
+Weighted score: 用户可配置权重; normalize features to [0,1] and sum.
+输出
+展示前N条; 保存到 Excel/CSV; 可选导出为 Markdown/HTML table。
+Summary stats: 命中过滤数、均价/中位数、面积分布、剩余房源按区域分布。
+数据与测试构造
+Synthesize a sample dataset: create 30–100 rows with realistic columns (price, area, rooms, district, metro_distance, floor, year_built, tags).
+Create test queries (结构化 & 自然语言) and expected counts to validate parsing + filtering.
+Unit tests for parser (regex extraction) and filter functions.
