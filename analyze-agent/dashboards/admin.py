@@ -1,12 +1,17 @@
-﻿import streamlit as st
-import pandas as pd
+﻿import sys
 from pathlib import Path
 
-# TODO: set actual Parquet path from config
-DEFAULT_PARQUET = Path(__file__).resolve().parents[1] / "data" / "processed" / "listings.parquet"
+import pandas as pd
+import streamlit as st
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.config import settings
 
 
-def load_data(path: Path = DEFAULT_PARQUET) -> pd.DataFrame:
+def load_data(path: Path = settings.paths.processed_parquet) -> pd.DataFrame:
     """Load processed listings for admin view (TODO: error handling, caching)."""
     return pd.read_parquet(path) if path.exists() else pd.DataFrame()
 
@@ -24,7 +29,8 @@ def main():
         st.header("Filters")
         cities = st.multiselect("城市", sorted(df["city"].dropna().unique()))
         districts = st.multiselect("城区", sorted(df["district"].dropna().unique()))
-        min_price, max_price = st.slider("总价区间(万)", 0, int(df["total_price"].max() or 1000), (0, int(df["total_price"].max() or 1000)))
+        max_price_default = int(df["total_price"].max() or 1000)
+        min_price, max_price = st.slider("总价区间(万)", 0, max_price_default, (0, max_price_default))
 
     mask = pd.Series(True, index=df.index)
     if cities:
