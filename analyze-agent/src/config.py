@@ -48,6 +48,7 @@ class Settings:
     semantic_model: str = "BAAI/bge-small-zh"  # embedding model name
     llm_model: str = "gpt-4o-mini"
     llm_api_key_env: str = "OPENAI_API_KEY"
+    llm_api_key: str | None = None  # 可直接填入 key；建议优先用环境变量
 
 
 settings = Settings()

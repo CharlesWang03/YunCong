@@ -26,7 +26,7 @@ class AnswerGenerator:
         self.template = self._load_template()
 
     def _build_default_client(self):
-        api_key = os.getenv(settings.llm_api_key_env)
+        api_key = settings.llm_api_key or os.getenv(settings.llm_api_key_env)
         if api_key and OpenAI is not None:
             return OpenAI(api_key=api_key)
         return None
