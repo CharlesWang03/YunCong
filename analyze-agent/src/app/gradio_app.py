@@ -68,8 +68,8 @@ def search_filters(
     if df.empty:
         return pd.DataFrame()
     conditions = {
-        "city": city or None,
-        "districts": [district] if district else None,
+        "city": None if city == _DEF_OPTION else city,
+        "districts": None if district == _DEF_OPTION else [district],
         "min_price": min_price or None,
         "max_price": max_price or None,
         "min_area": min_area or None,
@@ -84,10 +84,7 @@ def search_filters(
     return _format_table(ranked)
 
 
-# Build options for dropdowns from data
-_DEF_CITY = ""
-_DEF_DISTRICT = ""
-_DEF_OPTION = "全部/留空"
+_DEF_OPTION = "全部"
 
 
 def _build_options():
