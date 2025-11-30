@@ -4,6 +4,7 @@ from __future__ import annotations
 import gradio as gr
 import pandas as pd
 
+from src.app.assistant_api import search_assistant
 from src.agent.orchestrator import Orchestrator
 from src.agent.answer_generator import AnswerGenerator
 from src.config import settings
