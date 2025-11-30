@@ -12,6 +12,8 @@ from src.retrieval.bm25_engine import BM25Engine
 from src.retrieval.filter_engine import apply_filters
 from src.retrieval.query_parser import QueryParser
 from src.retrieval.semantic_engine import SemanticEngine
+from src.analytics.summary import summarize_listings
+from src.agent.answer_generator import AnswerGenerator
 
 
 @dataclass
@@ -70,3 +72,33 @@ class Orchestrator:
 
         ranked = self.ranker.rank(filtered, top_k=top_k)
         return {"results": ranked, "parsed": parsed}
+
+    def run_assistant(
+        self,
+        user_query: str,
+        df: pd.DataFrame,
+        top_k: int = 10,
+        conditions: Dict[str, Any] | None = None,
+        llm_client: Any | None = None,
+    ) -> Dict[str, Any]:
+        """助手模式：检索→统计→生成分析报告。"""
+        result = self.run(
+            user_query=user_query,
+            df=df,
+            top_k=top_k,
+            conditions=conditions,
+            use_bm25=True,
+            use_semantic=True,
+        )
+        ranked = result["results"]
+        if ranked.empty:
+            return {"answer": "当前条件下没有找到合适的房源，建议放宽预算/面积/地段后再试。", "results": ranked}
+
+        summary = summarize_listings(ranked, result.get("parsed", {}))
+        answer = AnswerGenerator(llm_client=llm_client).generate_report(
+            user_query=user_query,
+            user_filter=result.get("parsed", {}),
+            listings=ranked,
+            summary_stats=summary,
+        )
+        return {"answer": answer, "results": ranked, "summary": summary}

@@ -140,7 +140,7 @@ def main() -> None:
             run_assist = gr.Button("生成回答")
             answer_assist = gr.Textbox(label="回答", lines=6)
             table_assist = gr.Dataframe(interactive=False)
-            run_assist.click(fn=search_free, inputs=[query_assist, top_k_assist], outputs=[answer_assist, table_assist])
+            run_assist.click(fn=search_assistant, inputs=[query_assist, top_k_assist], outputs=[answer_assist, table_assist])
 
     demo.launch()
 
