@@ -31,7 +31,9 @@ def build_bm25_index() -> None:
     corpus = _build_corpus(df)
     vectorizer = TfidfVectorizer(
         analyzer="word",
-        token_pattern=None,
+        tokenizer=str.split,  # tokens already space-joined
+        preprocessor=None,
+        lowercase=False,
         max_features=settings.bm25_max_features,
         ngram_range=settings.bm25_ngram,
     )
