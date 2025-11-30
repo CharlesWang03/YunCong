@@ -14,16 +14,21 @@ from src.utils.text_utils import tokenize, join_tokens
 class SemanticEngine:
     """Vector similarity search wrapper."""
 
-    def __init__(self) -> None:
-        if not settings.paths.vector_faiss.exists() or not settings.paths.vector_meta.exists():
-            raise FileNotFoundError(
-                f"Vector index/meta not found ({settings.paths.vector_faiss}, {settings.paths.vector_meta}), run pipeline/build_vectors.py first"
-            )
-        self.index = faiss.read_index(str(settings.paths.vector_faiss))
-        meta = joblib.load(settings.paths.vector_meta)
-        self.ids = meta.get("ids", [])
-        model_name = meta.get("model_name", settings.semantic_model)
-        self.model = SentenceTransformer(model_name)
+    def __init__(self, index: faiss.Index | None = None, model: SentenceTransformer | None = None) -> None:
+        if index is not None and model is not None:
+            self.index = index
+            self.model = model
+            self.ids = list(range(index.ntotal))
+        else:
+            if not settings.paths.vector_faiss.exists() or not settings.paths.vector_meta.exists():
+                raise FileNotFoundError(
+                    f"Vector index/meta not found ({settings.paths.vector_faiss}, {settings.paths.vector_meta}), run pipeline/build_vectors.py first"
+                )
+            self.index = faiss.read_index(str(settings.paths.vector_faiss))
+            meta = joblib.load(settings.paths.vector_meta)
+            self.ids = meta.get("ids", [])
+            model_name = meta.get("model_name", settings.semantic_model)
+            self.model = SentenceTransformer(model_name)
 
     def _prep_query(self, query: str) -> np.ndarray:
         """对查询分词并编码成归一化向量。"""

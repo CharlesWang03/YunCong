@@ -55,4 +55,4 @@ def apply_filters(df: pd.DataFrame, conditions: Dict[str, Any]) -> pd.DataFrame:
     if school_district := conditions.get("school_district"):
         mask &= df["school_district"] == school_district
 
-    return df.loc[mask].reset_index(drop=True)
+    return df.loc[mask]

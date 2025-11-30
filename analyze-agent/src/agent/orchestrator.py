@@ -14,6 +14,7 @@ from src.retrieval.query_parser import QueryParser
 from src.retrieval.semantic_engine import SemanticEngine
 from src.analytics.summary import summarize_listings
 from src.agent.answer_generator import AnswerGenerator
+from src.pipeline.context import SessionDataContext
 
 
 @dataclass
@@ -52,6 +53,7 @@ class Orchestrator:
         conditions: Dict[str, Any] | None = None,
         use_bm25: bool = True,
         use_semantic: bool = True,
+        context: SessionDataContext | None = None,
     ) -> Dict[str, Any]:
         """端到端：解析/条件→过滤→检索→融合排序。"""
         parsed = conditions or self.parser.parse(user_query)
@@ -61,12 +63,18 @@ class Orchestrator:
             return {"results": pd.DataFrame(), "parsed": parsed}
 
         if use_bm25:
-            filtered = self._get_bm25().attach_scores(filtered, user_query, top_k=top_k * 2)
+            bm25_engine = self._get_bm25() if context is None or context.bm25_index is None else BM25Engine(bundle=context.bm25_index)
+            filtered = bm25_engine.attach_scores(filtered, user_query, top_k=top_k * 2)
         else:
             filtered = filtered.copy()
             filtered["bm25_score"] = 0.0
         if use_semantic:
-            filtered = self._get_semantic().attach_scores(filtered, user_query, top_k=top_k * 2)
+            if context is not None and context.vector_index is not None:
+                idx = context.vector_index.get("index")
+                model = context.vector_index.get("model")
+                filtered = SemanticEngine(index=idx, model=model).attach_scores(filtered, user_query, top_k=top_k * 2)
+            else:
+                filtered = self._get_semantic().attach_scores(filtered, user_query, top_k=top_k * 2)
         else:
             filtered["semantic_score"] = 0.0
 
@@ -80,6 +88,7 @@ class Orchestrator:
         top_k: int = 10,
         conditions: Dict[str, Any] | None = None,
         llm_client: Any | None = None,
+        context: SessionDataContext | None = None,
     ) -> Dict[str, Any]:
         """助手模式：检索→统计→生成分析报告。"""
         result = self.run(
@@ -89,6 +98,7 @@ class Orchestrator:
             conditions=conditions,
             use_bm25=True,
             use_semantic=True,
+            context=context,
         )
         ranked = result["results"]
         if ranked.empty:

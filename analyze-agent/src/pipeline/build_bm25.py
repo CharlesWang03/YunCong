@@ -27,9 +27,8 @@ def _build_corpus(df: pd.DataFrame) -> list[str]:
     return corpus
 
 
-def build_bm25_index() -> None:
-    """构建基于 TF-IDF+jieba 的 BM25 风格索引并持久化。"""
-    df = pd.read_parquet(settings.paths.processed_parquet)
+def build_bm25_from_dataframe(df: pd.DataFrame) -> dict:
+    """基于 DataFrame 构建 BM25/TF-IDF 索引并返回 bundle。"""
     corpus = _build_corpus(df)
     vectorizer = TfidfVectorizer(
         analyzer="word",
@@ -41,7 +40,14 @@ def build_bm25_index() -> None:
     )
     pipeline = Pipeline([("tfidf", vectorizer)])
     matrix = pipeline.fit_transform(corpus)
-    joblib.dump({"pipeline": pipeline, "matrix": matrix}, settings.paths.bm25_index)
+    return {"pipeline": pipeline, "matrix": matrix}
+
+
+def build_bm25_index() -> None:
+    """构建基于 TF-IDF+jieba 的 BM25 风格索引并持久化。"""
+    df = pd.read_parquet(settings.paths.processed_parquet)
+    bundle = build_bm25_from_dataframe(df)
+    joblib.dump(bundle, settings.paths.bm25_index)
     print(f"Saved BM25-like index to {settings.paths.bm25_index}")
 
 

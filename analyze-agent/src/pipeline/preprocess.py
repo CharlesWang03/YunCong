@@ -23,13 +23,9 @@ def _normalize_tags(raw: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(tags))  # unique preserve order
 
 
-def preprocess(input_path: Path | None = None, output_path: Path | None = None) -> Path:
-    """读取 Excel，清洗字段并写出 Parquet。"""
-    src_path = input_path or settings.paths.raw_excel
-    dst_path = output_path or settings.paths.processed_parquet
-    dst_path.parent.mkdir(parents=True, exist_ok=True)
-
-    df = pd.read_excel(src_path)
+def preprocess_dataframe(df_raw: pd.DataFrame) -> pd.DataFrame:
+    """对原始 DataFrame 清洗并返回标准字段。"""
+    df = df_raw.copy()
 
     list_fields = ["tags"]
     for col in list_fields:
@@ -68,7 +64,18 @@ def preprocess(input_path: Path | None = None, output_path: Path | None = None) 
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
     df.dropna(subset=["id", "city", "district"], inplace=True)
-    df.to_parquet(dst_path, index=False)
+    return df
+
+
+def preprocess(input_path: Path | None = None, output_path: Path | None = None) -> Path:
+    """读取 Excel，清洗字段并写出 Parquet。"""
+    src_path = input_path or settings.paths.raw_excel
+    dst_path = output_path or settings.paths.processed_parquet
+    dst_path.parent.mkdir(parents=True, exist_ok=True)
+
+    df_raw = pd.read_excel(src_path)
+    clean_df = preprocess_dataframe(df_raw)
+    clean_df.to_parquet(dst_path, index=False)
     return dst_path
 
 

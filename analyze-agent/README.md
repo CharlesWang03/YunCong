@@ -14,14 +14,15 @@
 ## 当前进展
 - 数据：`generate_listings` 分层覆盖（每城/区/1-4 室至少若干条）+ 随机补充；`preprocess` 清洗至 Parquet。
 - 检索：解析支持城市/城区、精确“X室Y厅”；硬过滤按等值/区间；BM25（TF-IDF+jieba）与语义（bge-small-zh+FAISS）召回。
-- 排序：质量分 + BM25/语义/投送量融合，TopN 输出。
-- 编排/UI：Gradio 提供 Filter/搜索/助手三模式（Filter 模式禁用 BM25/语义以保证速度）；Streamlit 后台可视化。
+- 排序：质量子分拆解归一化后融合 BM25/语义，投送为乘性加成；输出 TopN 与可解释组件。
+- 编排/UI：Gradio 提供 Filter/搜索/助手三模式；新增模式4（上传 Excel 分析）；Streamlit 后台可视化。
 - 依赖与配置：torch/torchvision/transformers/sentence-transformers 已固定版本；config/utils/prompts/tests 骨架就绪。
 
 ## 加权得分策略（当前）
-- 质量分（computed_quality）：低单价、高面积、新年份、近地铁/学校、质量字段加权；promotion_weight 单独作为 promotion_score。
-- 综合得分：fused_score = quality_score*0.5 + bm25_score*0.25 + semantic_score*0.25 + promotion_score*0.1（权重可在 config.Settings 中配置）。
-- Filter 模式：仅硬过滤+质量分/投送分排序（不跑 BM25/语义）。搜索/助手模式：开启 BM25+语义并融合。
+- 质量分由子分数（价格贴合、面积、房龄、地铁、学区、楼层、朝向、装修）归一化后按权重求和。
+- BM25/语义分按当次候选做 min-max 归一化，融合权重默认质量0.6/BM250.2/语义0.2。
+- Promotion 乘性加成：`final = base_score * (1 + max_boost * sqrt(promotion_score))`，避免失控。
+- Filter 模式仅硬过滤 + 质量/投送排序；搜索/助手模式融合 BM25/语义。
 
 ## 使用指南（复用 conda 环境 llm_env）
 ```bash
@@ -33,11 +34,16 @@ python -m src.pipeline.generate_listings   # 生成示例 Excel（分层+随机�
 python -m src.pipeline.preprocess          # 清洗为 Parquet
 python -m src.pipeline.build_bm25          # 构建 BM25(TF-IDF+jieba) 索引
 python -m src.pipeline.build_vectors       # 构建语义索引（bge-small-zh + FAISS）
-python -m src.app.gradio_app               # 运行检索 UI（三模式）
+python -m src.app.gradio_app               # 运行检索 UI（三模式+模式4上传分析）
 # 或：streamlit run dashboards/admin.py    # 后台数据浏览
 ```
 > 如提示“数据未准备”，说明 Parquet/索引未生成，按上述顺序跑完管线。
 > 如加载 bge-small-zh 失败，请确认 torch/torchvision/transformers/sentence-transformers 已按 requirements 安装，并重新运行 build_vectors。
+
+## 模式4：上传 Excel 分析
+- 上传一份待售房产列表（Excel），系统解析并清洗到内存，构建临时 BM25/向量索引。
+- 复用助手模式逻辑，在该 Excel 数据集上完成过滤/检索/排序/分析并生成报告。
+- 数据隔离于会话内，不影响全局默认库。
 
 ## 性能现状
 - Filter 模式：仅硬过滤+排序，响应较快。
@@ -47,7 +53,7 @@ python -m src.app.gradio_app               # 运行检索 UI（三模式）
 1) 检索效率：
    - 语义检索 top_k 调低、改用 bge-mini；热门查询向量/结果缓存；提供“仅 BM25”开关。
    - 索引层优化：中文停用词、自定义词典，BM25 参数调优。
-2) 智能助手（模式三）：
+2) 智能助手（模式三/四）：
    - 接入真实 LLM（API/本地），在 `AnswerGenerator` 中增加引用/解释；控制上下文长度、TopK、输出格式。
    - Prompt 优化：明确角色、输出格式、引用字段，避免幻觉；加入安全提示和失败回退。
 3) 排序/加权：
@@ -58,6 +64,7 @@ python -m src.app.gradio_app               # 运行检索 UI（三模式）
    - 日志与可观测性：检索耗时拆解（过滤/BM25/语义/排序），异常告警。
 5) 体验与接口：
    - Gradio/Streamlit UI 优化：提示、预填、结果说明；提供 FastAPI 接口便于集成。
+   - TODO 模式5：上传 Excel 结果不足时，可补充默认全局库进行混合排序与推荐（预留扩展点）。
 
 ## 一键运行脚本
 在项目根运行（需已创建并激活 conda llm_env）：

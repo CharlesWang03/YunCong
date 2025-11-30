@@ -28,27 +28,23 @@ def _build_corpus(df: pd.DataFrame) -> list[str]:
     return corpus
 
 
-def build_vector_index() -> None:
-    """使用 bge-small-zh 生成向量并构建 FAISS 索引。"""
-    df = pd.read_parquet(settings.paths.processed_parquet)
+def build_vectors_from_dataframe(df: pd.DataFrame):
+    """基于 DataFrame 构建语义向量索引，返回 (faiss_index, model)。"""
     corpus = _build_corpus(df)
-
-    try:
-        model = SentenceTransformer(settings.semantic_model)
-    except Exception as exc:  # pragma: no cover - download/env issues
-        raise RuntimeError(
-            f"Failed to load model {settings.semantic_model}. "
-            "Please ensure torch/torchvision/transformers versions match requirements.txt "
-            "and network/cache are available for model download. "
-            "Error: %s" % exc
-        ) from exc
-
+    model = SentenceTransformer(settings.semantic_model)
     embeddings = model.encode(corpus, batch_size=64, show_progress_bar=True, normalize_embeddings=True)
     embeddings = np.asarray(embeddings, dtype="float32")
 
     dim = embeddings.shape[1]
     index = faiss.IndexFlatIP(dim)
     index.add(embeddings)
+    return index, model
+
+
+def build_vector_index() -> None:
+    """使用 bge-small-zh 生成向量并构建 FAISS 索引。"""
+    df = pd.read_parquet(settings.paths.processed_parquet)
+    index, model = build_vectors_from_dataframe(df)
 
     settings.paths.processed_dir.mkdir(parents=True, exist_ok=True)
     faiss.write_index(index, str(settings.paths.vector_faiss))

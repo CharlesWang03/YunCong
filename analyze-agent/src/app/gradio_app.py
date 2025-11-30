@@ -4,6 +4,10 @@ from __future__ import annotations
 import gradio as gr
 import pandas as pd
 
+from src.pipeline.context import SessionDataContext
+from src.pipeline.excel_parser import parse_uploaded_excel
+from src.pipeline.build_bm25 import build_bm25_from_dataframe
+from src.pipeline.build_vectors import build_vectors_from_dataframe
 from src.app.assistant_api import search_assistant
 from src.agent.orchestrator import Orchestrator
 from src.agent.answer_generator import AnswerGenerator
@@ -11,6 +15,7 @@ from src.config import settings
 
 _orch: Orchestrator | None = None
 _data: pd.DataFrame | None = None
+_session_context: SessionDataContext | None = None
 
 
 def get_orch() -> Orchestrator:
@@ -51,6 +56,28 @@ def search_free(query: str, top_k: int = 10):
     ranked = result["results"]
     answer = AnswerGenerator().generate(query, ranked.to_dict(orient="records"))
     return answer, _format_table(ranked)
+
+
+def search_assistant_upload(query: str, top_k: int = 10):
+    """助手模式（使用上传的 Excel 数据上下文）。"""
+    global _session_context
+    if _session_context is None:
+        return "尚未上传或解析 Excel 文件，请先上传待售房产列表。", pd.DataFrame()
+    orch = get_orch()
+    result = orch.run_assistant(user_query=query, df=_session_context.df, top_k=top_k, context=_session_context)
+    ranked = result.get("results", pd.DataFrame())
+    answer = result.get("answer", "")
+    return answer, _format_table(ranked)
+
+
+def on_file_uploaded(file):
+    """解析上传的 Excel，构建临时索引并存入会话上下文。"""
+    global _session_context
+    df_clean = parse_uploaded_excel(file)
+    bm25_bundle = build_bm25_from_dataframe(df_clean)
+    vector_index, vector_model = build_vectors_from_dataframe(df_clean)
+    _session_context = SessionDataContext(df=df_clean, bm25_index=bm25_bundle, vector_index={"index": vector_index, "model": vector_model})
+    return f"已成功载入 {len(df_clean)} 条房源数据，用于本次分析。"
 
 
 def search_filters(
@@ -142,6 +169,20 @@ def main() -> None:
             answer_assist = gr.Textbox(label="回答", lines=6)
             table_assist = gr.Dataframe(interactive=False)
             run_assist.click(fn=search_assistant, inputs=[query_assist, top_k_assist], outputs=[answer_assist, table_assist])
+
+        with gr.Tab("模式4：上传 Excel 分析"):
+            upload_info = gr.Markdown("上传一份待售房产 Excel，系统将在该文件上完成过滤/检索/分析。")
+            file_uploader = gr.File(label="上传 Excel", file_types=[".xls", ".xlsx"])
+            load_btn = gr.Button("加载 Excel")
+            load_status = gr.Textbox(label="加载状态", interactive=False)
+            query_upload = gr.Textbox(label="对话/需求", placeholder="请给我一个北京两室的推荐报告")
+            top_k_upload = gr.Slider(5, 50, value=10, step=1, label="Top K")
+            run_upload = gr.Button("生成报告")
+            answer_upload = gr.Textbox(label="回答", lines=8)
+            table_upload = gr.Dataframe(interactive=False)
+
+            load_btn.click(fn=on_file_uploaded, inputs=[file_uploader], outputs=[load_status])
+            run_upload.click(fn=search_assistant_upload, inputs=[query_upload, top_k_upload], outputs=[answer_upload, table_upload])
 
     demo.launch()
 

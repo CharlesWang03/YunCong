@@ -13,12 +13,16 @@ from src.utils.text_utils import tokenize, join_tokens
 class BM25Engine:
     """Wrap TF-IDF index for lexical relevance."""
 
-    def __init__(self) -> None:
-        if not settings.paths.bm25_index.exists():
-            raise FileNotFoundError(f"BM25 index not found at {settings.paths.bm25_index}, run pipeline/build_bm25.py first")
-        bundle = joblib.load(settings.paths.bm25_index)
-        self.pipeline = bundle["pipeline"]
-        self.matrix = bundle["matrix"]
+    def __init__(self, bundle: dict | None = None) -> None:
+        if bundle is not None:
+            self.pipeline = bundle["pipeline"]
+            self.matrix = bundle["matrix"]
+        else:
+            if not settings.paths.bm25_index.exists():
+                raise FileNotFoundError(f"BM25 index not found at {settings.paths.bm25_index}, run pipeline/build_bm25.py first")
+            bundle = joblib.load(settings.paths.bm25_index)
+            self.pipeline = bundle["pipeline"]
+            self.matrix = bundle["matrix"]
 
     def _prep_query(self, query: str) -> str:
         """对查询分词并拼接，适配向量化器。"""
