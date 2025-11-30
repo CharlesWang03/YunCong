@@ -18,6 +18,11 @@
 - 编排/UI：Gradio 提供 Filter/搜索/助手三模式（Filter 模式禁用 BM25/语义以保证速度）；Streamlit 后台可视化。
 - 依赖与配置：torch/torchvision/transformers/sentence-transformers 已固定版本；config/utils/prompts/tests 骨架就绪。
 
+## 加权得分策略（当前）
+- 质量分（computed_quality）：低单价、高面积、新年份、近地铁/学校、质量字段加权；promotion_weight 单独作为 promotion_score。
+- 综合得分：fused_score = quality_score*0.5 + bm25_score*0.25 + semantic_score*0.25 + promotion_score*0.1（权重可在 config.Settings 中配置）。
+- Filter 模式：仅硬过滤+质量分/投送分排序（不跑 BM25/语义）。搜索/助手模式：开启 BM25+语义并融合。
+
 ## 使用指南（复用 conda 环境 llm_env）
 ```bash
 cd analyze-agent
@@ -53,3 +58,9 @@ python -m src.app.gradio_app               # 运行检索 UI（三模式）
    - 日志与可观测性：检索耗时拆解（过滤/BM25/语义/排序），异常告警。
 5) 体验与接口：
    - Gradio/Streamlit UI 优化：提示、预填、结果说明；提供 FastAPI 接口便于集成。
+
+## 一键运行脚本
+在项目根运行（需已创建并激活 conda llm_env）：
+```bash
+bash run_all.sh
+```
