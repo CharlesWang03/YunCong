@@ -22,7 +22,7 @@
 ```bash
 cd analyze-agent
 conda activate llm_env
-pip install -r requirements.txt          # 会安装 torch>=2.6, transformers>=4.41, sentence-transformers>=2.7
+pip install -r requirements.txt          # 会安装 torch/torchvision/transformers/sentence-transformers 指定版本
 python -m src.pipeline.generate_listings   # 生成示例 Excel（分层+随机）
 python -m src.pipeline.preprocess          # 清洗为 Parquet
 python -m src.pipeline.build_bm25          # 构建 BM25(TF-IDF+jieba) 索引
@@ -31,7 +31,7 @@ python -m src.app.gradio_app               # 运行检索 UI
 # 或：streamlit run dashboards/admin.py    # 后台数据浏览
 ```
 > 如提示“数据未准备”，说明 Parquet/索引未生成，按上述顺序跑完管线。
-> 如加载 bge-small-zh 失败，请确认 torch/transformers/sentence-transformers 已按 requirements 更新。
+> 如加载 bge-small-zh 失败，请确认 torch/torchvision/transformers/sentence-transformers 已按 requirements 安装，并重新安装依赖后再跑 build_vectors。
 
 ## 下一步计划
 1) 索引与检索：加入中文停用词表，优化权重调优；可选本地 jieba 自定义词典。

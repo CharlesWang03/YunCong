@@ -8,6 +8,8 @@ gradio>=4.26
 streamlit>=1.35
 pyarrow>=16.0
 faiss-cpu>=1.7
-torch>=2.6
-transformers>=4.41
-sentence-transformers>=2.7
+# Pin torch stack to avoid torchvision operator errors
+torch==2.2.2
+torchvision==0.17.2
+transformers==4.38.2
+sentence-transformers==2.7.0

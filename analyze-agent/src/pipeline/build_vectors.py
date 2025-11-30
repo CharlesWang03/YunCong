@@ -36,7 +36,8 @@ def build_vector_index() -> None:
     except Exception as exc:  # pragma: no cover - download/env issues
         raise RuntimeError(
             f"Failed to load model {settings.semantic_model}. "
-            "Please ensure torch>=2.6 and sentence-transformers dependencies are installed. "
+            "Please ensure torch/torchvision/transformers versions match requirements.txt "
+            "and network/cache are available for model download. "
             "Error: %s" % exc
         ) from exc
 
