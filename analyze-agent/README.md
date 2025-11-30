@@ -15,7 +15,7 @@
 - 数据：`generate_listings` 分层覆盖（每城/区/1-4 室至少若干条）+ 随机补充；`preprocess` 清洗至 Parquet。
 - 检索：解析支持城市/城区、精确“X室Y厅”；硬过滤按等值/区间；BM25（TF-IDF+jieba）与语义（bge-small-zh+FAISS）召回。
 - 排序：质量分 + BM25/语义/投送量融合，TopN 输出。
-- 编排/UI：Gradio UI 提供 Filter/搜索/助手三模式（Filter 模式禁用 BM25/语义以保证速度）；Streamlit 后台可视化。
+- 编排/UI：Gradio 提供 Filter/搜索/助手三模式（Filter 模式禁用 BM25/语义以保证速度）；Streamlit 后台可视化。
 - 依赖与配置：torch/torchvision/transformers/sentence-transformers 已固定版本；config/utils/prompts/tests 骨架就绪。
 
 ## 使用指南（复用 conda 环境 llm_env）
@@ -23,6 +23,7 @@
 cd analyze-agent
 conda activate llm_env
 pip install -r requirements.txt          # 安装固定版本的 torch/torchvision/transformers/sentence-transformers 等
+# 如已生成数据/索引，可跳过下列四步
 python -m src.pipeline.generate_listings   # 生成示例 Excel（分层+随机）
 python -m src.pipeline.preprocess          # 清洗为 Parquet
 python -m src.pipeline.build_bm25          # 构建 BM25(TF-IDF+jieba) 索引
@@ -37,15 +38,18 @@ python -m src.app.gradio_app               # 运行检索 UI（三模式）
 - Filter 模式：仅硬过滤+排序，响应较快。
 - 搜索/助手模式：包含 BM25 + 语义编码/FAISS，耗时较高；可减小 top_k、更换小模型或缓存结果。
 
-## 下一步计划
-1) 性能优化：调低语义检索 top_k，尝试 bge-mini 或提供“仅 BM25”开关；引入查询缓存。
-2) 索引与检索：加入中文停用词表，可选自定义 jieba 词典，权重调优。
-3) 排序调优：调整质量分与 BM25/语义权重，支持投送干预配置；一致性过滤优先于排序。
-4) LLM 集成：在 `AnswerGenerator` 中接入真实 LLM，生成解释/理由。
-5) 评价与测试：构造示例查询集，补单测，记录召回/排序指标；优化 Gradio/Streamlit 体验或提供 FastAPI 接口。
-
-## 一键运行脚本
-在项目根运行（需已创建并激活 conda llm_env）：
-```bash
-bash run_all.sh
-```
+## 下一步优化方向（推荐）
+1) 检索效率：
+   - 语义检索 top_k 调低、改用 bge-mini；热门查询向量/结果缓存；提供“仅 BM25”开关。
+   - 索引层优化：中文停用词、自定义词典，BM25 参数调优。
+2) 智能助手（模式三）：
+   - 接入真实 LLM（API/本地），在 `AnswerGenerator` 中增加引用/解释；控制上下文长度、TopK、输出格式。
+   - Prompt 优化：明确角色、输出格式、引用字段，避免幻觉；加入安全提示和失败回退。
+3) 排序/加权：
+   - 调整质量分、BM25、语义、投送量权重；可配置 A/B；一致性过滤（城市/户型）优先于排序。
+   - 设计更细的 promotion 策略（上限、衰减），避免过度干预。
+4) 评测与监控：
+   - 构造查询-期望结果集，补单测；记录响应时间、召回率、TopK 点击/满意度指标。
+   - 日志与可观测性：检索耗时拆解（过滤/BM25/语义/排序），异常告警。
+5) 体验与接口：
+   - Gradio/Streamlit UI 优化：提示、预填、结果说明；提供 FastAPI 接口便于集成。
