@@ -79,9 +79,27 @@ def search_filters(
         "school_district": school_district if school_district else None,
     }
     orch = get_orch()
-    result = orch.run(user_query="", df=df, top_k=top_k, conditions=conditions)
+    result = orch.run(user_query="", df=df, top_k=top_k, conditions=conditions, use_bm25=False, use_semantic=False)
     ranked = result["results"]
     return _format_table(ranked)
+
+
+# Build options for dropdowns from data
+_DEF_CITY = ""
+_DEF_DISTRICT = ""
+_DEF_OPTION = "全部/留空"
+
+
+def _build_options():
+    df = load_data()
+    if df.empty:
+        return [_DEF_OPTION], [_DEF_OPTION]
+    cities = sorted(df["city"].dropna().unique().tolist())
+    districts = sorted(df["district"].dropna().unique().tolist())
+    return [_DEF_OPTION] + cities, [_DEF_OPTION] + districts
+
+
+_CITIES_OPTS, _DISTRICTS_OPTS = _build_options()
 
 
 def main() -> None:
@@ -90,8 +108,8 @@ def main() -> None:
 
         with gr.Tab("Filter 过滤模式"):
             with gr.Row():
-                city = gr.Textbox(label="城市", placeholder="北京")
-                district = gr.Textbox(label="城区", placeholder="海淀")
+                city = gr.Dropdown(choices=_CITIES_OPTS, value=_DEF_OPTION, label="城市")
+                district = gr.Dropdown(choices=_DISTRICTS_OPTS, value=_DEF_OPTION, label="城区")
             with gr.Row():
                 min_price = gr.Number(label="最低总价(万)", value=None)
                 max_price = gr.Number(label="最高总价(万)", value=None)

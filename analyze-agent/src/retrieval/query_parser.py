@@ -21,7 +21,7 @@ class QueryParser:
     """Parse user input into structured filters and keyword hints."""
 
     def parse(self, text: str) -> Dict[str, object]:
-        normalized = text.strip()
+        normalized = normalize_cn_numbers(text.strip())
         min_price = None
         max_price = None
         if match := PRICE_RE.search(normalized):
@@ -66,3 +66,28 @@ class QueryParser:
             "keywords": keywords,
             "raw": text,
         }
+
+
+CN_NUM_MAP = {
+    "零": "0",
+    "〇": "0",
+    "一": "1",
+    "两": "2",
+    "二": "2",
+    "三": "3",
+    "四": "4",
+    "五": "5",
+    "六": "6",
+    "七": "7",
+    "八": "8",
+    "九": "9",
+    "十": "10",
+}
+
+
+def normalize_cn_numbers(text: str) -> str:
+    """Convert simple中文数字（含“两”）到阿拉伯数字，便于正则匹配。"""
+    for cn, digit in CN_NUM_MAP.items():
+        text = text.replace(cn, digit)
+    text = text.replace("居", "室")
+    return text
