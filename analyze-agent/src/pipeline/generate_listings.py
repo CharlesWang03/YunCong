@@ -34,7 +34,7 @@ def _mock_listing(
     district: str | None = None,
     bedrooms: int | None = None,
 ) -> dict:
-    """Generate a single listing with optional forced city/district/bedrooms for coverage."""
+    """生成单条房源；可强制城市/城区/卧室数用于分层覆盖。"""
     city = city or random.choice(list(CITIES.keys()))
     district = district or random.choice(CITIES[city])
     community = fake.street_name()
@@ -132,7 +132,7 @@ def _mock_listing(
 
 
 def generate_listings(n: int = 2000, coverage_per_bedroom: int = 8) -> pd.DataFrame:
-    """Generate synthetic listings with stratified coverage per city/district/bedroom."""
+    """按城市/城区/户型分层覆盖并补充随机样本，生成房源数据。"""
     records: List[dict] = []
     idx = 1
     # Coverage block: ensure each city/district/bedroom bucket has samples
@@ -152,7 +152,7 @@ def generate_listings(n: int = 2000, coverage_per_bedroom: int = 8) -> pd.DataFr
 
 
 def save_to_excel(path: Path | None = None, n: int = 2000, coverage_per_bedroom: int = 8) -> Path:
-    """Generate listings and save to Excel (raw)."""
+    """生成房源并保存到 Excel（原始数据）。"""
     output = path or settings.paths.raw_excel
     output.parent.mkdir(parents=True, exist_ok=True)
     df = generate_listings(n=n, coverage_per_bedroom=coverage_per_bedroom)
@@ -161,6 +161,7 @@ def save_to_excel(path: Path | None = None, n: int = 2000, coverage_per_bedroom:
 
 
 def main() -> None:
+    """入口：生成并落盘 Excel。"""
     saved = save_to_excel()
     print(f"Generated listings to {saved}")
 

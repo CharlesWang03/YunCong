@@ -26,11 +26,13 @@ class SemanticEngine:
         self.model = SentenceTransformer(model_name)
 
     def _prep_query(self, query: str) -> np.ndarray:
+        """对查询分词并编码成归一化向量。"""
         processed = join_tokens(tokenize(query))
         vec = self.model.encode([processed], normalize_embeddings=True)
         return np.asarray(vec, dtype="float32")
 
     def search(self, query: str, top_k: int = 50) -> list[tuple[int, float]]:
+        """返回语义相似度排序的索引+得分。"""
         query_vec = self._prep_query(query)
         scores, idxs = self.index.search(query_vec, top_k)
         results: list[tuple[int, float]] = []
@@ -41,6 +43,7 @@ class SemanticEngine:
         return results
 
     def attach_scores(self, df: pd.DataFrame, query: str, top_k: int = 50) -> pd.DataFrame:
+        """将语义得分写入 DataFrame 副本。"""
         matches = self.search(query, top_k=top_k)
         if not matches:
             df["semantic_score"] = 0.0

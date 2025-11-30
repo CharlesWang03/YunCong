@@ -21,9 +21,11 @@ class BM25Engine:
         self.matrix = bundle["matrix"]
 
     def _prep_query(self, query: str) -> str:
+        """对查询分词并拼接，适配向量化器。"""
         return join_tokens(tokenize(query))
 
     def search(self, query: str, top_k: int = 50) -> list[tuple[int, float]]:
+        """返回按 BM25 相似度排序的索引+得分。"""
         processed = self._prep_query(query)
         query_vec = self.pipeline.transform([processed])
         sims = cosine_similarity(query_vec, self.matrix).ravel()
@@ -31,6 +33,7 @@ class BM25Engine:
         return [(int(i), float(sims[i])) for i in top_idx if sims[i] > 0]
 
     def attach_scores(self, df: pd.DataFrame, query: str, top_k: int = 50) -> pd.DataFrame:
+        """将 BM25 得分写入 DataFrame 副本。"""
         matches = self.search(query, top_k=top_k)
         if not matches:
             df["bm25_score"] = 0.0

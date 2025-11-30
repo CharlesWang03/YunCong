@@ -12,6 +12,7 @@ from src.utils.text_utils import tokenize, join_tokens
 
 
 def _build_corpus(df: pd.DataFrame) -> list[str]:
+    """拼接文本+标签并分词，生成语料列表。"""
     text_cols = ["description", "community_intro", "surrounding"]
     corpus = []
     for _, row in df.iterrows():
@@ -28,6 +29,7 @@ def _build_corpus(df: pd.DataFrame) -> list[str]:
 
 
 def build_vector_index() -> None:
+    """使用 bge-small-zh 生成向量并构建 FAISS 索引。"""
     df = pd.read_parquet(settings.paths.processed_parquet)
     corpus = _build_corpus(df)
 
@@ -55,6 +57,7 @@ def build_vector_index() -> None:
 
 
 def main() -> None:
+    """入口：构建语义向量索引。"""
     build_vector_index()
 
 

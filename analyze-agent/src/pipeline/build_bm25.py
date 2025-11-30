@@ -11,6 +11,7 @@ from src.utils.text_utils import tokenize, join_tokens
 
 
 def _build_corpus(df: pd.DataFrame) -> list[str]:
+    """将多字段文本+标签拼接并分词，生成语料列表。"""
     text_cols = ["description", "community_intro", "surrounding"]
     corpus = []
     for _, row in df.iterrows():
@@ -27,6 +28,7 @@ def _build_corpus(df: pd.DataFrame) -> list[str]:
 
 
 def build_bm25_index() -> None:
+    """构建基于 TF-IDF+jieba 的 BM25 风格索引并持久化。"""
     df = pd.read_parquet(settings.paths.processed_parquet)
     corpus = _build_corpus(df)
     vectorizer = TfidfVectorizer(
@@ -44,6 +46,7 @@ def build_bm25_index() -> None:
 
 
 def main() -> None:
+    """入口：构建 BM25 索引。"""
     build_bm25_index()
 
 

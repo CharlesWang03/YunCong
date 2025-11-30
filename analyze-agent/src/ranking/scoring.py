@@ -7,7 +7,7 @@ from src.config import settings
 
 
 def compute_quality_scores(df: pd.DataFrame) -> pd.DataFrame:
-    """Compute heuristic quality scores (in-place copy)."""
+    """计算启发式质量分，返回带评分的副本。"""
     scored = df.copy()
 
     # Normalize helpful fields
@@ -46,6 +46,7 @@ def compute_quality_scores(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def fuse_scores(df: pd.DataFrame, weights: dict | None = None) -> pd.DataFrame:
+    """按权重融合 BM25/语义/质量/投送分，生成综合得分。"""
     w = weights or {
         "quality": settings.weights.quality,
         "bm25": settings.weights.bm25,

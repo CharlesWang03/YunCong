@@ -12,6 +12,7 @@ class AnswerGenerator:
         pass
 
     def generate(self, user_query: str, results: List[Dict[str, Any]]) -> str:
+        """基于排序结果生成模板回答，可替换为真实 LLM 调用。"""
         if not results:
             return "未找到匹配房源，请尝试放宽条件。"
         lines = [f"用户需求：{user_query}\n推荐房源："]

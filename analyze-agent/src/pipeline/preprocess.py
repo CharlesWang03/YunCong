@@ -10,6 +10,7 @@ from src.config import settings
 
 
 def _normalize_tags(raw: Iterable[str]) -> list[str]:
+    """清洗标签字段：分隔、去空、去重。"""
     tags = []
     for t in raw:
         if pd.isna(t):
@@ -23,6 +24,7 @@ def _normalize_tags(raw: Iterable[str]) -> list[str]:
 
 
 def preprocess(input_path: Path | None = None, output_path: Path | None = None) -> Path:
+    """读取 Excel，清洗字段并写出 Parquet。"""
     src_path = input_path or settings.paths.raw_excel
     dst_path = output_path or settings.paths.processed_parquet
     dst_path.parent.mkdir(parents=True, exist_ok=True)
@@ -71,6 +73,7 @@ def preprocess(input_path: Path | None = None, output_path: Path | None = None) 
 
 
 def main() -> None:
+    """入口：执行清洗管线。"""
     saved = preprocess()
     print(f"Preprocessed data saved to {saved}")
 

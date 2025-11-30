@@ -18,7 +18,7 @@ AREA_RE = re.compile(r"(\d+)\s*平")
 
 
 class QueryParser:
-    """Parse user input into structured filters and keyword hints."""
+    """解析用户输入，转为结构化过滤条件与关键词。"""
 
     def parse(self, text: str) -> Dict[str, object]:
         normalized = normalize_cn_numbers(text.strip())

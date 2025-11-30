@@ -51,7 +51,7 @@ class Orchestrator:
         use_bm25: bool = True,
         use_semantic: bool = True,
     ) -> Dict[str, Any]:
-        """End-to-end flow: parse (or use provided conditions) -> retrieve -> rank."""
+        """端到端：解析/条件→过滤→检索→融合排序。"""
         parsed = conditions or self.parser.parse(user_query)
         filtered = apply_filters(df, parsed)
 

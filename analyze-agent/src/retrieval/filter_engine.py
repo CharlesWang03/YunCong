@@ -15,7 +15,7 @@ def _to_list(val: Any) -> Iterable:
 
 
 def apply_filters(df: pd.DataFrame, conditions: Dict[str, Any]) -> pd.DataFrame:
-    """Apply hard filters to listings using boolean masks."""
+    """使用布尔掩码应用硬过滤条件。"""
     mask = pd.Series(True, index=df.index)
 
     if city := conditions.get("city"):

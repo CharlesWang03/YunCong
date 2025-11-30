@@ -13,5 +13,6 @@ class Ranker:
         self.weights = weights or {}
 
     def rank(self, df: pd.DataFrame, top_k: int = 10) -> pd.DataFrame:
+        """融合得分后排序并返回前 top_k。"""
         scored = fuse_scores(df, weights=self.weights)
         return scored.sort_values("fused_score", ascending=False).head(top_k).reset_index(drop=True)
