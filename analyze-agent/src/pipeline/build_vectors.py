@@ -31,7 +31,15 @@ def build_vector_index() -> None:
     df = pd.read_parquet(settings.paths.processed_parquet)
     corpus = _build_corpus(df)
 
-    model = SentenceTransformer(settings.semantic_model)
+    try:
+        model = SentenceTransformer(settings.semantic_model)
+    except Exception as exc:  # pragma: no cover - download/env issues
+        raise RuntimeError(
+            f"Failed to load model {settings.semantic_model}. "
+            "Please ensure torch>=2.6 and sentence-transformers dependencies are installed. "
+            "Error: %s" % exc
+        ) from exc
+
     embeddings = model.encode(corpus, batch_size=64, show_progress_bar=True, normalize_embeddings=True)
     embeddings = np.asarray(embeddings, dtype="float32")
 
