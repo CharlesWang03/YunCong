@@ -61,8 +61,10 @@ class AnswerGenerator:
         if listings.empty:
             return "当前条件下没有找到合适的房源，建议放宽预算/面积/地段后再试。"
 
+        formatted_summary = self._format_summary(summary_stats)
+
         if self.llm_client is not None and self.template:
-            prompt = self._render_prompt(user_query, user_filter, summary_stats, listings)
+            prompt = self._render_prompt(user_query, user_filter, formatted_summary, listings)
             try:
                 resp = self.llm_client.chat.completions.create(
                     model=settings.llm_model,
@@ -74,9 +76,23 @@ class AnswerGenerator:
                 )
                 return resp.choices[0].message.content.strip()
             except Exception as exc:  # pragma: no cover - LLM 调用失败时降级
-                return f"(LLM 调用失败，使用占位报告。错误: {exc})\n" + self._fallback_report(user_query, listings, summary_stats)
+                return f"(LLM 调用失败，使用占位报告。错误: {exc})\n" + self._fallback_report(user_query, listings, formatted_summary)
 
-        return self._fallback_report(user_query, listings, summary_stats)
+        return self._fallback_report(user_query, listings, formatted_summary)
+
+    def _format_summary(self, summary: Dict[str, Any]) -> Dict[str, Any]:
+        """对数值做适度四舍五入，便于阅读。"""
+        def r(x, ndigits=1):
+            try:
+                return round(float(x), ndigits)
+            except Exception:
+                return x
+
+        formatted = dict(summary)
+        for k in ["price_min", "price_max", "price_avg", "price_median", "unit_price_avg", "area_min", "area_max", "area_avg", "distance_to_subway_avg", "distance_to_subway_min"]:
+            if k in formatted:
+                formatted[k] = r(formatted[k], 1)
+        return formatted
 
     def _fallback_report(self, user_query: str, listings: pd.DataFrame, summary_stats: Dict[str, Any]) -> str:
         lines: List[str] = []
