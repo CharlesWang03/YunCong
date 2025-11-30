@@ -46,6 +46,8 @@ class Settings:
     bm25_max_features: int = 8000
     bm25_ngram: tuple[int, int] = (1, 2)
     semantic_model: str = "BAAI/bge-small-zh"  # embedding model name
+    llm_model: str = "gpt-4o-mini"
+    llm_api_key_env: str = "OPENAI_API_KEY"
 
 
 settings = Settings()
