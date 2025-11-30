@@ -21,16 +21,28 @@ class Paths:
 
 @dataclass
 class RetrievalWeights:
-    quality: float = 0.5
-    bm25: float = 0.25
-    semantic: float = 0.25
-    promotion: float = 0.1  # multiplier for promotion_weight if present
+    quality: float = 0.6
+    bm25: float = 0.2
+    semantic: float = 0.2
+    promotion: float = 0.2  # max boost factor (as percentage) for promotion multiplier
 
 
 @dataclass
 class Settings:
     paths: Paths = field(default_factory=Paths)
     weights: RetrievalWeights = field(default_factory=RetrievalWeights)
+    quality_weights: Dict[str, float] = field(
+        default_factory=lambda: {
+            "price": 0.25,
+            "area": 0.15,
+            "age": 0.1,
+            "subway": 0.2,
+            "school": 0.15,
+            "floor": 0.05,
+            "orientation": 0.05,
+            "renovation": 0.05,
+        }
+    )
     bm25_max_features: int = 8000
     bm25_ngram: tuple[int, int] = (1, 2)
     semantic_model: str = "BAAI/bge-small-zh"  # embedding model name
