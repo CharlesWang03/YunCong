@@ -12,32 +12,29 @@
 - LLM 回答：将 TopN 结果与用户问题交给 LLM，总结推荐并解释理由（RAG 风格）。
 
 ## 当前进展
-- 完整骨架与占位实现：
-  - `src/schema/listing_schema.py` 完整 Listing 字段（含公司、投送量）。
-  - `src/pipeline/`：生成样例数据、预处理、BM25 索引、向量索引。
-  - `src/retrieval/`：硬过滤、BM25/Tf-idf 召回、语义（Tf-idf 向量）召回、查询解析。
-  - `src/ranking/`：质量分与多路得分融合、排序器。
-  - `src/agent/`：编排器与回答生成模板（可接入真实 LLM）。
-  - `src/app/gradio_app.py`：简单检索 UI。
-  - `dashboards/admin.py`：Streamlit 后台数据浏览/筛选/分布。
-  - `config.py`、`utils/`、`prompts/`、`tests/` 占位。
+- 数据与生成：`generate_listings` 支持分层覆盖（每城/区/户型至少若干条）+ 随机补充；`preprocess` 清洗到 Parquet。
+- 检索：查询解析支持城市/城区识别、精确“X室Y厅”过滤；硬过滤按等值/区间筛选；BM25/语义（TF-IDF）召回。
+- 排序：质量分 + BM25/语义/投送量融合；支持 TopN 排序。
+- 编排/UI：Orchestrator 串联解析→召回→排序，Gradio UI；Streamlit 后台可视化。
+- 配置/占位：config、utils、prompts、tests 等骨架。
 
-## 使用指南（本地，复用已有 conda 环境 llm_env）
+## 使用指南（复用 conda 环境 llm_env）
 ```bash
 cd analyze-agent
 conda activate llm_env
 pip install -r requirements.txt
-python -m src.pipeline.generate_listings   # 生成示例 Excel
+python -m src.pipeline.generate_listings   # 生成示例 Excel（分层+随机）
 python -m src.pipeline.preprocess          # 清洗为 Parquet
 python -m src.pipeline.build_bm25          # 构建 BM25(TF-IDF) 索引
 python -m src.pipeline.build_vectors       # 构建语义(TF-IDF) 索引
 python -m src.app.gradio_app               # 运行检索 UI
 # 或：streamlit run dashboards/admin.py    # 后台数据浏览
 ```
+> 如提示“数据未准备”，说明 Parquet/索引未生成，按上述顺序跑完管线。
 
 ## 下一步计划
-1) 完善索引与检索：BM25/向量索引持久化优化，加入分词/中文停用词表。
-2) 语义能力：可替换 TF-IDF 为本地 embedding（如 bge-mini）或在线向量服务。
-3) LLM 集成：在 `AnswerGenerator` 中接入真实 LLM，并增加引用/解释。
-4) 排序调优：调整质量分与 BM25/语义权重，支持投送量干预、A/B 配置。
-5) 测试与监控：补充单测与示例查询集，增加日志/指标。
+1) 索引与检索：加入中文分词/停用词，优化 BM25；替换语义向量为小型 embedding（如 bge-mini）。
+2) 排序调优：调整权重，支持投送干预配置；增加一致性过滤（城市/城区、户型）优先于排序。
+3) LLM 集成：在 `AnswerGenerator` 中接入真实 LLM，生成解释/理由。
+4) 评价与测试：构造示例查询集，补单测，记录召回/排序指标。
+5) 部署体验：优化 Gradio/Streamlit 交互，考虑 FastAPI 接口。

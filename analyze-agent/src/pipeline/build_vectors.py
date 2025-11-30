@@ -1,13 +1,14 @@
-﻿"""Build semantic vector index placeholder."""
+﻿"""Build vector index using sentence-transformers and FAISS."""
 from __future__ import annotations
 
 import joblib
+import numpy as np
 import pandas as pd
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.pipeline import Pipeline
-from sklearn.metrics.pairwise import cosine_similarity
+import faiss
+from sentence_transformers import SentenceTransformer
 
 from src.config import settings
+from src.utils.text_utils import tokenize, join_tokens
 
 
 def _build_corpus(df: pd.DataFrame) -> list[str]:
@@ -17,24 +18,31 @@ def _build_corpus(df: pd.DataFrame) -> list[str]:
         parts = []
         for col in text_cols:
             val = row.get(col, "") if isinstance(row, dict) else row[col] if col in row else ""
-            if pd.notna(val):
-                parts.append(str(val))
+            parts.append(str(val) if pd.notna(val) else "")
         tags = row.get("tags") if isinstance(row, dict) else row["tags"] if "tags" in row else []
         if isinstance(tags, list):
-            parts.extend(tags)
-        corpus.append(" ".join(parts))
+            parts.extend([str(t) for t in tags])
+        tokens = tokenize(" ".join(parts))
+        corpus.append(join_tokens(tokens))
     return corpus
 
 
 def build_vector_index() -> None:
     df = pd.read_parquet(settings.paths.processed_parquet)
     corpus = _build_corpus(df)
-    vectorizer = TfidfVectorizer(max_features=settings.bm25_max_features, ngram_range=(1, 2))
-    pipeline = Pipeline([("tfidf", vectorizer)])
-    matrix = pipeline.fit_transform(corpus)
-    # Save same structure; semantic engine will reuse cosine similarity
-    joblib.dump({"pipeline": pipeline, "matrix": matrix}, settings.paths.vector_index)
-    print(f"Saved vector index to {settings.paths.vector_index}")
+
+    model = SentenceTransformer(settings.semantic_model)
+    embeddings = model.encode(corpus, batch_size=64, show_progress_bar=True, normalize_embeddings=True)
+    embeddings = np.asarray(embeddings, dtype="float32")
+
+    dim = embeddings.shape[1]
+    index = faiss.IndexFlatIP(dim)
+    index.add(embeddings)
+
+    settings.paths.processed_dir.mkdir(parents=True, exist_ok=True)
+    faiss.write_index(index, str(settings.paths.vector_faiss))
+    joblib.dump({"ids": list(range(len(df))), "model_name": settings.semantic_model}, settings.paths.vector_meta)
+    print(f"Saved vector index to {settings.paths.vector_faiss} with {len(df)} entries")
 
 
 def main() -> None:

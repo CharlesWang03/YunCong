@@ -15,7 +15,8 @@ class Paths:
     raw_excel: Path = raw_dir / "listings.xlsx"
     processed_parquet: Path = processed_dir / "listings.parquet"
     bm25_index: Path = processed_dir / "bm25_index.joblib"
-    vector_index: Path = processed_dir / "vector_index.joblib"
+    vector_faiss: Path = processed_dir / "vector_index.faiss"
+    vector_meta: Path = processed_dir / "vector_meta.joblib"
 
 
 @dataclass
@@ -32,7 +33,7 @@ class Settings:
     weights: RetrievalWeights = field(default_factory=RetrievalWeights)
     bm25_max_features: int = 8000
     bm25_ngram: tuple[int, int] = (1, 2)
-    semantic_model: str = "tfidf"  # placeholder; swap to sentence-transformers name if needed
+    semantic_model: str = "BAAI/bge-small-zh"  # embedding model name
 
 
 settings = Settings()

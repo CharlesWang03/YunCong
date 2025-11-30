@@ -1,4 +1,4 @@
-﻿"""Build BM25-like TF-IDF index for lexical relevance."""
+﻿"""Build BM25 index with jieba tokenization."""
 from __future__ import annotations
 
 import joblib
@@ -7,6 +7,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.pipeline import Pipeline
 
 from src.config import settings
+from src.utils.text_utils import tokenize, join_tokens
 
 
 def _build_corpus(df: pd.DataFrame) -> list[str]:
@@ -16,19 +17,24 @@ def _build_corpus(df: pd.DataFrame) -> list[str]:
         parts = []
         for col in text_cols:
             val = row.get(col, "") if isinstance(row, dict) else row[col] if col in row else ""
-            if pd.notna(val):
-                parts.append(str(val))
+            parts.append(str(val) if pd.notna(val) else "")
         tags = row.get("tags") if isinstance(row, dict) else row["tags"] if "tags" in row else []
         if isinstance(tags, list):
-            parts.extend(tags)
-        corpus.append(" ".join(parts))
+            parts.extend([str(t) for t in tags])
+        tokens = tokenize(" ".join(parts))
+        corpus.append(join_tokens(tokens))
     return corpus
 
 
 def build_bm25_index() -> None:
     df = pd.read_parquet(settings.paths.processed_parquet)
     corpus = _build_corpus(df)
-    vectorizer = TfidfVectorizer(max_features=settings.bm25_max_features, ngram_range=settings.bm25_ngram)
+    vectorizer = TfidfVectorizer(
+        analyzer="word",
+        token_pattern=None,
+        max_features=settings.bm25_max_features,
+        ngram_range=settings.bm25_ngram,
+    )
     pipeline = Pipeline([("tfidf", vectorizer)])
     matrix = pipeline.fit_transform(corpus)
     joblib.dump({"pipeline": pipeline, "matrix": matrix}, settings.paths.bm25_index)
