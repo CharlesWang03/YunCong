@@ -32,8 +32,15 @@ class Orchestrator:
             ranker=Ranker(),
         )
 
-    def run(self, user_query: str, df: pd.DataFrame, top_k: int = 10) -> Dict[str, Any]:
-        parsed = self.parser.parse(user_query)
+    def run(
+        self,
+        user_query: str,
+        df: pd.DataFrame,
+        top_k: int = 10,
+        conditions: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """End-to-end flow: parse (or use provided conditions) -> retrieve -> rank."""
+        parsed = conditions or self.parser.parse(user_query)
         filtered = apply_filters(df, parsed)
 
         if filtered.empty:

@@ -46,8 +46,11 @@ def apply_filters(df: pd.DataFrame, conditions: Dict[str, Any]) -> pd.DataFrame:
         mask &= df["bedrooms"] >= bedrooms_min
 
     livingrooms_exact = conditions.get("livingrooms_exact")
+    livingrooms_min = conditions.get("livingrooms_min")
     if livingrooms_exact is not None and "livingrooms" in df:
         mask &= df["livingrooms"] == livingrooms_exact
+    elif livingrooms_min is not None and "livingrooms" in df:
+        mask &= df["livingrooms"] >= livingrooms_min
 
     if school_district := conditions.get("school_district"):
         mask &= df["school_district"] == school_district
