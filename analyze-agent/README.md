@@ -1,73 +1,200 @@
-﻿# Analyze Agent
+﻿# **Analyze Agent — 房产检索与智能分析助手**
 
-房产检索与智能助手多模态 Demo：支持硬条件筛选、BM25 词法检索、语义向量检索，以及 LLM 生成的分析报告。新增「模式4：上传 Excel 分析」，可对用户上传的房源表做临时索引与报告生成。
+一个可扩展的房产搜索与分析 Demo，支持**结构化过滤、BM25 词法检索、语义向量检索、LLM 分析报告生成、Excel 上传解析**等能力。
+面向“数据分析助手”类任务构建，具备工程化管线、可插拔索引、可扩展模式设计。
 
-## 目标与能力
-- 数据准备：生成+清洗示例房源到 Parquet；支持上传 Excel 后即时构建索引。
-- 检索三路线：① 结构化硬过滤（城市/价格/面积/户型/学区等）；② 词法 BM25（TF-IDF + jieba）；③ 语义向量（bge-small-zh + FAISS）。
-- 排序：质量分（多维归一化）+ BM25 + 语义分，叠加可控 promotion 加成。
-- LLM 报告：对 TopN 结果做统计摘要（价格/面积/户型/地铁/学区等），生成结构化购房分析报告。
+---
 
-## 当前进展
-- 数据管线：`generate_listings` 分层随机生成房源；`preprocess` 清洗；`build_bm25` 词法索引；`build_vectors` 语义索引。
-- 检索/排序：Filter 模式仅硬过滤；Search/Assistant 融合 BM25+语义+质量分；promotion 乘性上限。
-- 模式4：上传 Excel 后，在内存中构建 BM25/向量索引，复用助手模式完成检索与报告。
-- UI：Gradio 提供 4 个模式；如需后台可自启 Streamlit 仪表盘。
+## **核心能力概览**
 
-## 模式说明
-- 模式1 Filter：仅硬条件过滤；不走 BM25/语义，速度最快。
-- 模式2 Search：文本查询 → BM25 + 语义检索 → 排序 → 列表返回。
-- 模式3 Assistant：文本/过滤 → 检索 + 排序 → 统计摘要 → LLM 生成分析报告。
-- 模式4 上传 Excel：上传房源表，构建会话级内存索引，在该数据集上运行模式3的分析与报告。
+### 🔍 **多路线检索管线**
 
-### 模式4工作流（核心步骤）
-1) 上传文件：前端 `gr.File`；点击“加载 Excel”触发。
-2) 解析清洗：`excel_parser.parse_uploaded_excel` 读取文件、映射常见中文列名，调用 `preprocess_dataframe` 对齐 schema。
-3) 临时索引：`build_bm25_from_dataframe`、`build_vectors_from_dataframe` 返回 BM25/向量索引（不落盘）。
-4) 会话上下文：封装为 `SessionDataContext`（df + bm25 + vector），仅当前会话有效。
-5) 检索与报告：查询按钮复用 `Orchestrator.run_assistant`，数据源改用会话上下文，输出 TopN 表格 + LLM 报告；未上传则提示先上传。
+系统同时支持三类主流检索方式：
 
-## 评分策略概要
-- 质量分：8 维（价格/面积/房龄/地铁/学区/楼层/朝向/装修），归一化到 [0,1] 后按权重线性组合。
-- BM25/语义分：每次检索内做 min-max 归一化；默认权重 0.6 / 0.2 / 0.2。
-- Promotion：乘性增益 `final = base * (1 + max_boost * sqrt(promotion_score))`，防止“花钱买榜”失控。
+1. **结构化硬过滤**：按城市、区域、价格区间、面积、户型、学区等字段进行约束过滤
+2. **词法检索（BM25）**：TF-IDF + jieba 分词，对房源描述文本执行词法匹配
+3. **语义检索（向量）**：bge-small-zh + FAISS，对自然语言需求执行语义召回
 
-## 使用指南（conda 环境 llm_env）
+三路信号可融合排序，得到更可靠的 TopN 结果。
+
+---
+
+### 🧮 **可解释排序机制**
+
+最终评分包含：
+
+| 信号               | 作用                     | 特点             |
+| ---------------- | ---------------------- | -------------- |
+| **质量分**          | 房龄/单价/面积/地铁/学区等八维特征归一化 | 体现“性价比”与“宜居度”  |
+| **BM25 分数**      | 文本词法相关性                | 对显式关键词强敏感      |
+| **语义分数**         | 需求与房源描述的 embedding 相似度 | 处理模糊需求与语义召回    |
+| **Promotion 加成** | 可控曝光加权（不失控）            | 防止“买榜”，乘性且上限约束 |
+
+默认权重：`0.6（质量） + 0.2（BM25） + 0.2（语义）`。
+
+---
+
+### 🧠 **LLM 分析报告**
+
+提供结构化购房助手能力：
+
+* 自动统计 TopN 房源的**价格区间、面积分布、主流户型、地铁比率、学区率**
+* 输出自然语言报告（推荐理由、优缺点、是否满足用户需求）
+* 支持默认库与上传 Excel 的分析
+
+---
+
+### 📄 **文件解析（模式 4）**
+
+用户可上传自己的 Excel 房源表：系统将自动完成：
+
+1. 字段映射与清洗
+2. 构建会话级 BM25/向量索引（不落盘）
+3. 基于上传数据执行筛选 / 检索 / 报告生成
+
+---
+
+## **系统模块结构**
+
+```
+analyze-agent/
+│
+├── data/                         # 示例 Excel & 清洗后 Parquet
+├── src/
+│   ├── pipeline/                 # 数据处理与索引构建
+│   │   ├── generate_listings.py
+│   │   ├── preprocess.py
+│   │   ├── build_bm25.py
+│   │   ├── build_vectors.py
+│   │   └── excel_parser.py       # 上传文件解析
+│   │
+│   ├── retrieval/                # 检索逻辑：过滤、BM25、向量
+│   ├── ranking/                  # 打分策略与融合排序
+│   ├── agent/                    # Orchestrator 与 LLM 报告生成
+│   └── app/
+│       ├── gradio_app.py         # 前端 UI（4 模式）
+│       └── assistant_api.py
+│
+├── scripts/                      # 一键构建/启动脚本
+├── config.py                     # 全局配置与可调参数
+└── README.md
+```
+
+---
+
+## **四大模式（产品化能力）**
+
+### **模式 1 — Filter（结构化过滤）**
+
+* 按字段筛选（城市/价格/面积/户型/学区等）
+* 不走文本检索，延迟最低
+* 适合运营或规则化查询
+
+---
+
+### **模式 2 — Search（多模态搜索）**
+
+* 文本查询 → BM25 + 语义向量召回
+* 融合排序后展示 TopN 房源
+* 适合自然语言搜索（例如：“北京海淀 两室 地铁附近”）
+
+---
+
+### **模式 3 — Assistant（智能分析报告）**
+
+基于查询 → 检索 → 排序的候选结果，生成：
+
+* 房源总结
+* 推荐逻辑
+* 风险提示（房龄、楼层、噪声因素）
+* 建议预算或区位调整
+
+---
+
+### **模式 4 — 上传 Excel（文件工作流）**
+
+1. 接受一份任意用户 Excel
+2. 自适应解析列名 → 内部 schema
+3. 在内存中构建 BM25/向量索引
+4. 对上传数据集运行完整助手流程
+
+> 一个支持“临时数据源”的分析 Agent（文件级 RAG 工作流）。
+
+---
+
+## **评分策略**
+
+```
+final_score = (0.6 * quality_score) +
+               (0.2 * bm25_score_norm) +
+               (0.2 * semantic_score_norm)
+
+final_score = final_score * (1 + max_boost * sqrt(promotion_score))
+```
+
+* 所有检索信号 min-max 归一化
+* 业务质量分可解释、可调
+* Promotion 为乘性且上限约束，避免异常曝光
+
+---
+
+## **运行方式（完整流程）**
+
+### **1. 环境准备**
+
 ```bash
 cd analyze-agent
 conda activate llm_env
 pip install -r requirements.txt
-# 配置 LLM：复制 .env.example 为 .env 并填入 OPENAI_API_KEY
-cp .env.example .env   # Windows 可用 copy .env.example .env
-# 或直接在终端导出环境变量
-# export OPENAI_API_KEY=your_key
-# 若首次运行或数据/索引未生成，执行：
-python -m src.pipeline.generate_listings   # 生成示例 Excel（分层覆盖）
-python -m src.pipeline.preprocess          # 清洗为 Parquet
-python -m src.pipeline.build_bm25          # 构建 BM25(TF-IDF+jieba)
-python -m src.pipeline.build_vectors       # 构建语义索引(bge-small-zh + FAISS)
-# 启动 Gradio（含模式1/2/3/4）
+
+cp .env.example .env       # 填入 OPENAI_API_KEY
+```
+
+---
+
+### **2. 构建数据与索引（首次运行需执行）**
+
+```bash
+python -m src.pipeline.generate_listings
+python -m src.pipeline.preprocess
+python -m src.pipeline.build_bm25
+python -m src.pipeline.build_vectors
+```
+
+---
+
+### **3. 启动 Gradio UI**
+
+```bash
 python -m src.app.gradio_app
 ```
-> 如语义模型加载失败，请检查 torch/torchvision/transformers/sentence-transformers 版本是否与 requirements 匹配。
 
-## 一键脚本
-端到端（含生成数据与索引）：`bash run_all.sh`（Windows 可在 Git Bash/WSL 下执行）。已生成数据时可注释脚本中前四步，只保留 Gradio 启动。
+访问：`http://127.0.0.1:7860`
 
-### 自动化脚本
-- **scripts/setup.sh**：安装依赖、生成示例 Excel、清洗为 Parquet，并构建 BM25/向量索引。
-- **scripts/start_gradio.sh**：检查所需数据与索引是否存在后，启动 Gradio UI（127.0.0.1:7860）。若缺失则提示先执行 setup。
+---
 
-## 已知问题与提示
-- Gradio API schema 若遇到 boolean schema 报错，已在代码中对 gradio_client 的解析做兼容补丁；如仍异常，可重装依赖或清理缓存后再试。
-- 上传 Excel 时请确保列名可映射到内部字段（城市/区县/总价/面积/户型/地铁/学区等），缺失字段将使用缺省值。
+## **自动化脚本**
 
-## 下一步优化方向
-1) 前端体验：优化界面布局与样式，让四个模式的展示更直观美观（列表/卡片、颜色与字体统一）。Done
-2) 模式3/4 Prompt：重写 LLM 提示词，贴近“分析报告”格式，控制数字精度与语气。Done
-3) 评测与调参：设计 20 条随机输入评测集，打通自动评测与权重调参工具，量化检索/排序准确度。
-4) 检索效率：缓存小模型、缩短向量维度、减少 top_k；必要时分“快速/深度”两级检索。
-5) 排序调优：A/B 调整质量权重、promotion 曲线，记录评分解释。
-6) UI 与可视化：补充 Streamlit 仪表盘、导出 CSV、评分解释面板。
-7) 预留模式5：上传数据稀疏时，考虑与默认全库混合召回与排序（入口已在代码注释中预留）。
-8) 模型微调：优化生成效果，向分析助手对齐
+* **scripts/setup.sh**
+  一键安装依赖、生成示例数据、构建索引
+* **scripts/start_gradio.sh**
+  检查索引 → 启动 Gradio UI
+
+---
+
+## **已知限制**
+
+* 某些 Gradio 版本的 boolean schema 会导致 API 解析报错，已在代码中加入兼容补丁
+* 上传 Excel 若字段命名过于非标准，需要手动补齐映射表
+
+---
+
+## **未来可扩展方向**
+
+1. Excel结构化入库优化
+2. LLM生成优化
+3. 设计评测、调参，用于优化推荐策略
+4. 用户搜索日志留存
+5. 模式4对话历史管理
+6. 模式 5：上传 Excel 与默认库混合召回
+7. 添加系统运行信息显示，方便报错调试
