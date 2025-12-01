@@ -1,4 +1,4 @@
-﻿"""Preprocess raw listings to Parquet."""
+"""预处理房源数据并写入 Parquet。"""
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,7 +10,7 @@ from src.config import settings
 
 
 def _normalize_tags(raw: Iterable[str]) -> list[str]:
-    """清洗标签字段：分隔、去空、去重。"""
+    """清洗标签字段，按分隔符拆分，去空去重。"""
     tags = []
     for t in raw:
         if pd.isna(t):
@@ -24,19 +24,22 @@ def _normalize_tags(raw: Iterable[str]) -> list[str]:
 
 
 def preprocess_dataframe(df_raw: pd.DataFrame) -> pd.DataFrame:
-    """对原始 DataFrame 清洗并返回标准字段。"""
+    """对原始 DataFrame 清洗并对齐标准字段。"""
     df = df_raw.copy()
 
+    # 规范标签字段
     list_fields = ["tags"]
     for col in list_fields:
         if col in df.columns:
             df[col] = df[col].apply(lambda x: _normalize_tags(x if isinstance(x, list) else [x]))
 
+    # 布尔字段
     bool_fields = ["tax_included", "elevator", "parking", "school_district"]
     for col in bool_fields:
         if col in df.columns:
             df[col] = df[col].astype("boolean")
 
+    # 数值字段
     numeric_cols = [
         "total_price",
         "unit_price",
@@ -63,12 +66,13 @@ def preprocess_dataframe(df_raw: pd.DataFrame) -> pd.DataFrame:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
 
+    # 必填字段缺失则丢弃
     df.dropna(subset=["id", "city", "district"], inplace=True)
     return df
 
 
 def preprocess(input_path: Path | None = None, output_path: Path | None = None) -> Path:
-    """读取 Excel，清洗字段并写出 Parquet。"""
+    """读取 Excel，清洗字段并写入 Parquet。"""
     src_path = input_path or settings.paths.raw_excel
     dst_path = output_path or settings.paths.processed_parquet
     dst_path.parent.mkdir(parents=True, exist_ok=True)
@@ -80,7 +84,7 @@ def preprocess(input_path: Path | None = None, output_path: Path | None = None) 
 
 
 def main() -> None:
-    """入口：执行清洗管线。"""
+    """CLI 入口：执行预处理。"""
     saved = preprocess()
     print(f"Preprocessed data saved to {saved}")
 

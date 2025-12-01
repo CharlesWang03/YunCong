@@ -37,6 +37,10 @@
 cd analyze-agent
 conda activate llm_env
 pip install -r requirements.txt
+# 配置 LLM：复制 .env.example 为 .env 并填入 OPENAI_API_KEY
+cp .env.example .env   # Windows 可用 copy .env.example .env
+# 或直接在终端导出环境变量
+# export OPENAI_API_KEY=your_key
 # 若首次运行或数据/索引未生成，执行：
 python -m src.pipeline.generate_listings   # 生成示例 Excel（分层覆盖）
 python -m src.pipeline.preprocess          # 清洗为 Parquet

@@ -1,0 +1,4 @@
+.env
+analyze-agent/.env
+__pycache__/
+*.pyc

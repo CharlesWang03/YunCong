@@ -1,4 +1,4 @@
-﻿"""Generate synthetic listings with stratified coverage."""
+"""生成分层覆盖的房源示例数据。"""
 from __future__ import annotations
 
 import random
@@ -16,15 +16,16 @@ fake = Faker("zh_CN")
 random.seed(42)
 np.random.seed(42)
 
+# 覆盖的城市/城区列表
 CITIES = {
-    "上海": ["徐汇", "浦东", "静安", "长宁", "杨浦", "普陀"],
+    "上海": ["浦东", "徐汇", "长宁", "普陀", "静安", "闵行"],
     "北京": ["海淀", "朝阳", "东城", "西城", "丰台", "通州"],
-    "深圳": ["南山", "福田", "罗湖", "宝安", "龙华"],
+    "深圳": ["南山", "福田", "宝安", "罗湖", "龙华"],
 }
-ORIENTATIONS = ["南北", "朝南", "朝东", "朝西", "朝北"]
+ORIENTATIONS = ["南北", "南", "东南", "西南", "东西"]
 BUILDING_TYPES = ["板楼", "塔楼", "洋房", "别墅"]
 RENOVATIONS = ["精装修", "简装", "毛坯"]
-COMPANIES = ["链家", "我爱我家", "德佑", "自营"]
+COMPANIES = ["贝壳", "我爱我家", "中原", "自营"]
 BEDROOM_BUCKETS = [1, 2, 3, 4]
 
 
@@ -34,7 +35,7 @@ def _mock_listing(
     district: str | None = None,
     bedrooms: int | None = None,
 ) -> dict:
-    """生成单条房源；可强制城市/城区/卧室数用于分层覆盖。"""
+    """生成一条房源，可指定城市/城区/卧室数以保证分层覆盖。"""
     city = city or random.choice(list(CITIES.keys()))
     district = district or random.choice(CITIES[city])
     community = fake.street_name()
@@ -67,7 +68,7 @@ def _mock_listing(
     lon = round(120 + random.random() * 10, 6)
 
     tags: List[str] = random.sample(
-        ["近地铁", "满五唯一", "南北通透", "精装修", "学区房", "配套成熟", "采光好", "低噪音"],
+        ["近地铁", "满五唯一", "南北通透", "精装修", "学区房", "高性价比", "可拎包", "采光好"],
         k=random.randint(2, 4),
     )
     renovation = random.choice(RENOVATIONS)
@@ -132,17 +133,17 @@ def _mock_listing(
 
 
 def generate_listings(n: int = 2000, coverage_per_bedroom: int = 8) -> pd.DataFrame:
-    """按城市/城区/户型分层覆盖并补充随机样本，生成房源数据。"""
+    """分层覆盖城市/城区/户型，再补足随机样本，生成房源 DataFrame。"""
     records: List[dict] = []
     idx = 1
-    # Coverage block: ensure each city/district/bedroom bucket has samples
+    # 分层覆盖：确保每个城市/城区/卧室桶都有样本
     for city, districts in CITIES.items():
         for district in districts:
             for br in BEDROOM_BUCKETS:
                 for _ in range(coverage_per_bedroom):
                     records.append(_mock_listing(idx, city=city, district=district, bedrooms=br))
                     idx += 1
-    # Fill remaining with fully random samples
+    # 补齐剩余数量的随机样本
     remaining = max(0, n - len(records))
     for _ in range(remaining):
         records.append(_mock_listing(idx))
@@ -161,7 +162,7 @@ def save_to_excel(path: Path | None = None, n: int = 2000, coverage_per_bedroom:
 
 
 def main() -> None:
-    """入口：生成并落盘 Excel。"""
+    """CLI 入口：生成示例 Excel。"""
     saved = save_to_excel()
     print(f"Generated listings to {saved}")
 

@@ -1,4 +1,4 @@
-﻿"""Structured filter engine."""
+"""结构化硬过滤引擎。"""
 from __future__ import annotations
 
 from typing import Any, Dict, Iterable
@@ -7,6 +7,7 @@ import pandas as pd
 
 
 def _to_list(val: Any) -> Iterable:
+    """将传入值安全转为可迭代列表，用于多选条件。"""
     if val is None:
         return []
     if isinstance(val, (list, tuple, set)):
@@ -15,7 +16,7 @@ def _to_list(val: Any) -> Iterable:
 
 
 def apply_filters(df: pd.DataFrame, conditions: Dict[str, Any]) -> pd.DataFrame:
-    """使用布尔掩码应用硬过滤条件。"""
+    """根据解析后的条件对 DataFrame 进行硬过滤。"""
     mask = pd.Series(True, index=df.index)
 
     if city := conditions.get("city"):
