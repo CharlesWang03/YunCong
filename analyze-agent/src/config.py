@@ -1,14 +1,20 @@
-﻿"""Project configuration for analyze-agent."""
+"""Project configuration for analyze-agent."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict
 
+from dotenv import load_dotenv
+
+# 预加载仓库内 .env（若存在），便于本地读取 OPENAI_API_KEY 等
+_BASE_DIR = Path(__file__).resolve().parent.parent
+load_dotenv(_BASE_DIR / ".env")
+
 
 @dataclass
 class Paths:
-    base_dir: Path = Path(__file__).resolve().parent.parent
+    base_dir: Path = _BASE_DIR
     data_dir: Path = base_dir / "data"
     raw_dir: Path = data_dir / "raw"
     processed_dir: Path = data_dir / "processed"
@@ -48,7 +54,7 @@ class Settings:
     semantic_model: str = "BAAI/bge-small-zh"  # embedding model name
     llm_model: str = "gpt-4o-mini"
     llm_api_key_env: str = "OPENAI_API_KEY"
-    llm_api_key: str | None = None  # 建议使用环境变量，不要把真实 key 写入代码库
+    llm_api_key: str | None = None  # 如需写死本地 key，可在此填入（不推荐提交）
 
 
 settings = Settings()
