@@ -54,6 +54,10 @@ python -m src.app.gradio_app
 ## 一键脚本
 端到端（含生成数据与索引）：`bash run_all.sh`（Windows 可在 Git Bash/WSL 下执行）。已生成数据时可注释脚本中前四步，只保留 Gradio 启动。
 
+### 自动化脚本
+- **scripts/setup.sh**：安装依赖、生成示例 Excel、清洗为 Parquet，并构建 BM25/向量索引。
+- **scripts/start_gradio.sh**：检查所需数据与索引是否存在后，启动 Gradio UI（127.0.0.1:7860）。若缺失则提示先执行 setup。
+
 ## 已知问题与提示
 - Gradio API schema 若遇到 boolean schema 报错，已在代码中对 gradio_client 的解析做兼容补丁；如仍异常，可重装依赖或清理缓存后再试。
 - 上传 Excel 时请确保列名可映射到内部字段（城市/区县/总价/面积/户型/地铁/学区等），缺失字段将使用缺省值。
